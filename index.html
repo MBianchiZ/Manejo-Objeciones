@@ -4,6 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Manejo de Objeciones con el MAC</title>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // ══════════════════════════════════════════════════
+    // PEGA AQUÍ TU firebaseConfig (ver guía Paso 5)
+    // ══════════════════════════════════════════════════
+ const firebaseConfig = {
+  apiKey: "AIzaSyDRTk3qPXo-o5o5Dwjt395lE8GiMEkez1M",
+  authDomain: "simulador-mac-actualicese.firebaseapp.com",
+  projectId: "simulador-mac-actualicese",
+  storageBucket: "simulador-mac-actualicese.firebasestorage.app",
+  messagingSenderId: "1048041370681",
+  appId: "1:1048041370681:web:64293c8eb0958000cc09e8",
+  measurementId: "G-4RN6PHRWCX"
+};
+    // ══════════════════════════════════════════════════
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Registrar una sesión de práctica
+    window.registrarSesionFirebase = async function(nombreAsesor) {
+      try {
+        await addDoc(collection(db, "sesiones"), {
+          nombre: nombreAsesor,
+          timestamp: serverTimestamp()
+        });
+      } catch(e) {
+        console.warn("Firebase: no se pudo registrar sesión", e);
+      }
+    };
+
+    // Cargar conteo por persona para el panel admin
+    window.cargarConteoAdmin = async function() {
+      try {
+        const snapshot = await getDocs(collection(db, "sesiones"));
+        const conteo = {};
+        snapshot.forEach(doc => {
+          const n = doc.data().nombre;
+          if(n) conteo[n] = (conteo[n] || 0) + 1;
+        });
+        return conteo;
+      } catch(e) {
+        console.warn("Firebase: no se pudo cargar conteo", e);
+        return {};
+      }
+    };
+  </script>
   <style>
 :root{
   /* ── Actualícese Brand Colors ── */
@@ -865,6 +915,83 @@ h1.hero .accent{color:var(--brand-green-dark);}
 .objection-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem;}
 .obj-chip{padding:.3rem .8rem;border-radius:20px;border:1.5px solid var(--border);background:var(--white);font-size:.75rem;font-weight:600;cursor:pointer;color:var(--gray-700);transition:all .18s;}
 .obj-chip:hover,.obj-chip.selected{border-color:var(--orange);background:var(--orange-light);color:var(--orange-dark);}
+
+/* ══ SELECTOR DE NOMBRE ══ */
+.name-modal-overlay{position:fixed;inset:0;background:rgba(15,17,23,.55);backdrop-filter:blur(6px);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+.name-modal-overlay.show{opacity:1;pointer-events:all;}
+.name-modal{background:var(--white);border-radius:20px;padding:2rem 2rem 1.75rem;width:min(520px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.18);transform:translateY(18px) scale(.97);transition:transform .28s cubic-bezier(.34,1.46,.64,1),opacity .25s;opacity:0;}
+.name-modal-overlay.show .name-modal{transform:translateY(0) scale(1);opacity:1;}
+.name-modal-header{margin-bottom:1.5rem;text-align:center;}
+.name-modal-title{font-family:'Figtree',sans-serif;font-size:1.35rem;font-weight:900;color:var(--black);letter-spacing:-.03em;margin-bottom:.3rem;}
+.name-modal-sub{font-size:.85rem;color:var(--gray-500);}
+.name-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.45rem;max-height:340px;overflow-y:auto;padding-right:.25rem;margin-bottom:1.25rem;}
+.name-grid::-webkit-scrollbar{width:4px;}
+.name-grid::-webkit-scrollbar-track{background:var(--gray-100);border-radius:4px;}
+.name-grid::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:4px;}
+.name-option{padding:.65rem .9rem;border-radius:10px;border:1.5px solid var(--border);background:var(--white);font-size:.82rem;font-weight:600;color:var(--gray-700);cursor:pointer;transition:all .18s;text-align:left;line-height:1.3;}
+.name-option:hover{border-color:var(--brand-navy);background:var(--brand-navy-bg);color:var(--brand-navy);}
+.name-option.selected{border-color:var(--brand-navy);background:var(--brand-navy);color:var(--white);}
+.name-modal-footer{display:flex;gap:.75rem;justify-content:flex-end;}
+.btn-name-cancel{padding:.6rem 1.25rem;border-radius:9px;border:1.5px solid var(--border);background:var(--white);font-size:.85rem;font-weight:600;color:var(--gray-600);cursor:pointer;transition:all .18s;}
+.btn-name-cancel:hover{border-color:var(--gray-400);background:var(--gray-50);}
+.btn-name-confirm{padding:.6rem 1.5rem;border-radius:9px;border:none;background:var(--brand-navy);color:var(--white);font-size:.85rem;font-weight:700;cursor:pointer;transition:all .18s;opacity:.45;pointer-events:none;}
+.btn-name-confirm.active{opacity:1;pointer-events:all;}
+.btn-name-confirm.active:hover{background:var(--brand-navy-dark);}
+.selected-name-badge{display:none;align-items:center;gap:.5rem;background:var(--brand-navy-bg);border:1px solid var(--brand-navy-mid);color:var(--brand-navy);font-size:.78rem;font-weight:700;padding:.3rem .75rem;border-radius:20px;margin-bottom:.75rem;}
+.selected-name-badge.show{display:inline-flex;}
+
+/* ══ PANEL ADMIN ══ */
+.admin-overlay{position:fixed;inset:0;background:rgba(15,17,23,.6);backdrop-filter:blur(8px);z-index:3000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+.admin-overlay.show{opacity:1;pointer-events:all;}
+.admin-panel{background:var(--white);border-radius:20px;width:min(680px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.22);transform:translateY(20px);transition:transform .3s cubic-bezier(.34,1.46,.64,1),opacity .25s;opacity:0;overflow:hidden;}
+.admin-overlay.show .admin-panel{transform:translateY(0);opacity:1;}
+.admin-panel-header{padding:1.5rem 1.75rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.admin-panel-title{font-family:'Figtree',sans-serif;font-size:1.2rem;font-weight:900;color:var(--black);letter-spacing:-.03em;}
+.admin-panel-sub{font-size:.78rem;color:var(--gray-500);margin-top:.15rem;}
+.btn-admin-close{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--gray-500);transition:all .18s;}
+.btn-admin-close:hover{border-color:var(--red);color:var(--red);background:var(--red-bg);}
+.admin-panel-body{padding:1.25rem 1.75rem 1.5rem;overflow-y:auto;flex:1;}
+.admin-stats-row{display:flex;gap:.75rem;margin-bottom:1.25rem;}
+.admin-stat{flex:1;background:var(--gray-50);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;text-align:center;}
+.admin-stat-num{font-family:'Figtree',sans-serif;font-size:1.6rem;font-weight:900;color:var(--brand-navy);letter-spacing:-.03em;}
+.admin-stat-label{font-size:.72rem;color:var(--gray-500);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-top:.1rem;}
+.admin-table{width:100%;border-collapse:collapse;}
+.admin-table th{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-500);padding:.5rem .75rem;text-align:left;border-bottom:2px solid var(--border);}
+.admin-table th.num{text-align:center;}
+.admin-table td{padding:.6rem .75rem;font-size:.86rem;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+.admin-table tr:last-child td{border-bottom:none;}
+.admin-table tr:hover td{background:var(--gray-50);}
+.admin-table td.name-cell{font-weight:600;color:var(--gray-900);}
+.admin-table td.count-cell{text-align:center;}
+.admin-count-badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:24px;padding:0 .5rem;border-radius:6px;font-size:.82rem;font-weight:800;background:var(--brand-navy-bg);color:var(--brand-navy);}
+.admin-count-badge.zero{background:var(--gray-100);color:var(--gray-400);}
+.admin-bar-cell{width:40%;}
+.admin-bar-wrap{background:var(--gray-100);border-radius:4px;height:6px;overflow:hidden;}
+.admin-bar-fill{height:100%;background:linear-gradient(90deg,var(--brand-navy),#A8E040);border-radius:4px;transition:width .6s ease;}
+.admin-loading{display:flex;align-items:center;justify-content:center;padding:2rem;color:var(--gray-500);font-size:.88rem;gap:.5rem;}
+.admin-refresh-btn{padding:.45rem 1rem;border-radius:8px;border:1.5px solid var(--border);background:var(--white);font-size:.78rem;font-weight:600;color:var(--gray-600);cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:.35rem;}
+.admin-refresh-btn:hover{border-color:var(--brand-navy);color:var(--brand-navy);background:var(--brand-navy-bg);}
+
+/* Candado admin en header */
+.admin-lock-btn{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:var(--gray-400);transition:all .18s;flex-shrink:0;}
+.admin-lock-btn:hover{border-color:var(--brand-navy);color:var(--brand-navy);background:var(--brand-navy-bg);}
+
+/* Password prompt */
+.pwd-overlay{position:fixed;inset:0;background:rgba(15,17,23,.6);backdrop-filter:blur(6px);z-index:2500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s;}
+.pwd-overlay.show{opacity:1;pointer-events:all;}
+.pwd-box{background:var(--white);border-radius:16px;padding:2rem;width:min(360px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.18);transform:translateY(14px);transition:transform .25s cubic-bezier(.34,1.46,.64,1),opacity .22s;opacity:0;}
+.pwd-overlay.show .pwd-box{transform:translateY(0);opacity:1;}
+.pwd-title{font-family:'Figtree',sans-serif;font-size:1.05rem;font-weight:800;color:var(--black);margin-bottom:.25rem;}
+.pwd-sub{font-size:.8rem;color:var(--gray-500);margin-bottom:1rem;}
+.pwd-input{width:100%;padding:.65rem .9rem;border:1.5px solid var(--border);border-radius:9px;font-size:.9rem;font-family:'Figtree',sans-serif;outline:none;transition:border-color .18s;margin-bottom:.35rem;}
+.pwd-input:focus{border-color:var(--brand-navy);}
+.pwd-input.error{border-color:var(--red);animation:shake .35s;}
+.pwd-error{font-size:.78rem;color:var(--red);min-height:1.2em;margin-bottom:.75rem;}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pwd-actions{display:flex;gap:.6rem;justify-content:flex-end;}
+.btn-pwd-cancel{padding:.55rem 1.1rem;border-radius:8px;border:1.5px solid var(--border);background:var(--white);font-size:.82rem;font-weight:600;color:var(--gray-600);cursor:pointer;}
+.btn-pwd-ok{padding:.55rem 1.2rem;border-radius:8px;border:none;background:var(--brand-navy);color:var(--white);font-size:.82rem;font-weight:700;cursor:pointer;}
+.btn-pwd-ok:hover{background:var(--brand-navy-dark);}
   </style>
 </head>
 <body>
@@ -882,6 +1009,55 @@ h1.hero .accent{color:var(--brand-green-dark);}
 
 <!-- LOCK TOAST -->
 <div class="lock-toast" id="lock-toast">Completa el módulo anterior primero</div>
+
+<!-- MODAL SELECTOR DE NOMBRE -->
+<div class="name-modal-overlay" id="name-modal-overlay">
+  <div class="name-modal">
+    <div class="name-modal-header">
+      <div class="name-modal-title">👤 ¿Quién está practicando?</div>
+      <div class="name-modal-sub">Selecciona tu nombre para registrar la sesión</div>
+    </div>
+    <div class="name-grid" id="name-grid"></div>
+    <div class="name-modal-footer">
+      <button class="btn-name-cancel" onclick="closeNameModal()">Cancelar</button>
+      <button class="btn-name-confirm" id="btn-name-confirm" onclick="confirmNameAndStart()">Comenzar simulación →</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY CONTRASEÑA ADMIN -->
+<div class="pwd-overlay" id="pwd-overlay">
+  <div class="pwd-box">
+    <div class="pwd-title">🔒 Panel de administrador</div>
+    <div class="pwd-sub">Ingresa la contraseña para acceder</div>
+    <input type="password" class="pwd-input" id="pwd-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')checkAdminPwd()">
+    <div class="pwd-error" id="pwd-error"></div>
+    <div class="pwd-actions">
+      <button class="btn-pwd-cancel" onclick="closePwdOverlay()">Cancelar</button>
+      <button class="btn-pwd-ok" onclick="checkAdminPwd()">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL ADMIN -->
+<div class="admin-overlay" id="admin-overlay" onclick="closeAdminIfBg(event)">
+  <div class="admin-panel">
+    <div class="admin-panel-header">
+      <div>
+        <div class="admin-panel-title">📊 Panel de Administrador</div>
+        <div class="admin-panel-sub">Sesiones de práctica registradas — actualización en tiempo real</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.6rem;">
+        <button class="admin-refresh-btn" onclick="loadAdminData()">↻ Actualizar</button>
+        <button class="btn-admin-close" onclick="closeAdminPanel()">✕</button>
+      </div>
+    </div>
+    <div class="admin-panel-body">
+      <div class="admin-stats-row" id="admin-stats-row"></div>
+      <div id="admin-table-wrap"><div class="admin-loading">⏳ Cargando datos...</div></div>
+    </div>
+  </div>
+</div>
 <!-- INTRO -->
 <div id="screen-intro" class="screen active">
   <div class="intro-deco"></div>
@@ -933,6 +1109,7 @@ h1.hero .accent{color:var(--brand-green-dark);}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Feedback
       </button>
+      <button class="admin-lock-btn" onclick="openPwdOverlay()" title="Panel de administrador">🔒</button>
     </div>
   </div>
   <div class="practice-body">
@@ -983,8 +1160,11 @@ h1.hero .accent{color:var(--brand-green-dark);}
             <option value="dificil">Difícil</option>
           </select>
         </div>
-        <div style="display:flex;align-items:flex-end;">
-          <button class="btn-new-chat" onclick="startPracticeChat()">Iniciar simulación</button>
+        <div style="display:flex;align-items:flex-end;flex-direction:column;gap:.4rem;">
+          <span class="selected-name-badge" id="selected-name-badge">
+            <span>👤</span><span id="selected-name-text"></span>
+          </span>
+          <button class="btn-new-chat" onclick="openNameModal()">Iniciar simulación</button>
         </div>
       </div>
     </div>
@@ -3058,6 +3238,231 @@ function confirmReset(){
     },
     true
   );
+}
+
+// ═══════════════════════════════════════════════════════
+// SELECTOR DE NOMBRE — Modal y lógica
+// ═══════════════════════════════════════════════════════
+
+const ASESORES_LIST = [
+  "Alegria Sanchez Monica Viviana",
+  "Bejarano Perdomo Lyda Maritza",
+  "Cisneros Marin Angelica",
+  "Parada Bustos Deysi Yesenia",
+  "Quiñones Quiñonez Yeimi Selena",
+  "Rojas Zapata Paula Andrea",
+  "Salazar Galarza Nataly",
+  "Serna Mario Alexander",
+  "Solis Banguera Mayra Gissela",
+  "Tascon Tamayo Aura Marcela",
+  "Katerine Lopez Perez",
+  "Claudia Yolima Rodriguez Tibad",
+  "Laguna Barrera Isabel Cristina",
+  "Molina Torres Beatriz Elena",
+  "Laura Tatiana Bernal Rojas",
+  "Martha Carolina Lopez Munoz",
+  "Yeison Steven Gonzalez Medina"
+];
+
+let _selectedAsesor = null;
+
+function openNameModal() {
+  // Render name grid
+  const grid = document.getElementById('name-grid');
+  grid.innerHTML = ASESORES_LIST.map(name =>
+    `<button class="name-option${_selectedAsesor === name ? ' selected' : ''}" onclick="selectName('${name.replace(/'/g,"\\'")}')">
+      ${name}
+    </button>`
+  ).join('');
+
+  const overlay = document.getElementById('name-modal-overlay');
+  overlay.classList.add('show');
+
+  // Update confirm button state
+  updateConfirmBtn();
+}
+
+function selectName(name) {
+  _selectedAsesor = name;
+  // Update grid visuals
+  document.querySelectorAll('.name-option').forEach(btn => {
+    btn.classList.toggle('selected', btn.textContent.trim() === name);
+  });
+  updateConfirmBtn();
+}
+
+function updateConfirmBtn() {
+  const btn = document.getElementById('btn-name-confirm');
+  if(_selectedAsesor) {
+    btn.classList.add('active');
+  } else {
+    btn.classList.remove('active');
+  }
+}
+
+function closeNameModal() {
+  document.getElementById('name-modal-overlay').classList.remove('show');
+}
+
+function confirmNameAndStart() {
+  if(!_selectedAsesor) return;
+  closeNameModal();
+
+  // Show badge
+  const badge = document.getElementById('selected-name-badge');
+  const badgeText = document.getElementById('selected-name-text');
+  if(badge && badgeText) {
+    badgeText.textContent = _selectedAsesor;
+    badge.classList.add('show');
+  }
+
+  // Start the chat
+  startPracticeChat();
+}
+
+// ═══════════════════════════════════════════════════════
+// Override startPracticeChat para registrar en Firebase
+// ═══════════════════════════════════════════════════════
+const _originalStartPracticeChat = startPracticeChat;
+// Patch: registrar sesión cuando inicie la práctica
+const _patchedStart = startPracticeChat;
+
+// We hook into the existing startPracticeChat by wrapping it
+// The actual registration happens right after calling the original
+// We monkey-patch at the bottom so original is already defined
+
+function registrarSesionYComenzar() {
+  // Register in Firebase
+  if(_selectedAsesor && typeof window.registrarSesionFirebase === 'function') {
+    window.registrarSesionFirebase(_selectedAsesor).catch(e => console.warn(e));
+  }
+}
+
+// Hook into the original start to also register
+const __origStart = window.startPracticeChat;
+window.startPracticeChat = function() {
+  // Register session
+  registrarSesionYComenzar();
+  // Call original
+  __origStart();
+};
+
+// ═══════════════════════════════════════════════════════
+// PANEL ADMIN — Contraseña y tabla
+// ═══════════════════════════════════════════════════════
+
+const ADMIN_PWD = 'Actualicese2026*';
+
+function openPwdOverlay() {
+  const overlay = document.getElementById('pwd-overlay');
+  const input = document.getElementById('pwd-input');
+  const err = document.getElementById('pwd-error');
+  input.value = '';
+  err.textContent = '';
+  input.classList.remove('error');
+  overlay.classList.add('show');
+  setTimeout(() => input.focus(), 200);
+}
+
+function closePwdOverlay() {
+  document.getElementById('pwd-overlay').classList.remove('show');
+}
+
+function checkAdminPwd() {
+  const input = document.getElementById('pwd-input');
+  const err = document.getElementById('pwd-error');
+  if(input.value === ADMIN_PWD) {
+    closePwdOverlay();
+    openAdminPanel();
+  } else {
+    input.classList.add('error');
+    err.textContent = 'Contraseña incorrecta. Inténtalo de nuevo.';
+    input.value = '';
+    setTimeout(() => input.classList.remove('error'), 400);
+  }
+}
+
+function openAdminPanel() {
+  document.getElementById('admin-overlay').classList.add('show');
+  loadAdminData();
+}
+
+function closeAdminPanel() {
+  document.getElementById('admin-overlay').classList.remove('show');
+}
+
+function closeAdminIfBg(e) {
+  if(e.target === document.getElementById('admin-overlay')) closeAdminPanel();
+}
+
+async function loadAdminData() {
+  const tableWrap = document.getElementById('admin-table-wrap');
+  const statsRow = document.getElementById('admin-stats-row');
+  tableWrap.innerHTML = '<div class="admin-loading">⏳ Cargando datos desde Firebase...</div>';
+  statsRow.innerHTML = '';
+
+  if(typeof window.cargarConteoAdmin !== 'function') {
+    tableWrap.innerHTML = '<div class="admin-loading" style="color:var(--red);">⚠️ Firebase no está configurado aún. Sigue la guía de instalación para conectar tu base de datos.</div>';
+    return;
+  }
+
+  const conteo = await window.cargarConteoAdmin();
+
+  // Build data: all asesores, even those with 0 sessions
+  const rows = ASESORES_LIST.map(name => ({
+    name,
+    count: conteo[name] || 0
+  })).sort((a, b) => b.count - a.count);
+
+  const totalSesiones = rows.reduce((s, r) => s + r.count, 0);
+  const conPractica = rows.filter(r => r.count > 0).length;
+  const maxCount = Math.max(...rows.map(r => r.count), 1);
+
+  // Stats
+  statsRow.innerHTML = `
+    <div class="admin-stat">
+      <div class="admin-stat-num">${totalSesiones}</div>
+      <div class="admin-stat-label">Sesiones totales</div>
+    </div>
+    <div class="admin-stat">
+      <div class="admin-stat-num">${conPractica}</div>
+      <div class="admin-stat-label">Asesores activos</div>
+    </div>
+    <div class="admin-stat">
+      <div class="admin-stat-num">${ASESORES_LIST.length}</div>
+      <div class="admin-stat-label">Total asesores</div>
+    </div>
+  `;
+
+  // Table
+  let html = `<table class="admin-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Asesor</th>
+        <th class="num">Sesiones</th>
+        <th class="admin-bar-cell">Progreso</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  rows.forEach((row, i) => {
+    const pct = Math.round((row.count / maxCount) * 100);
+    const badgeClass = row.count === 0 ? 'zero' : '';
+    html += `<tr>
+      <td style="color:var(--gray-400);font-size:.78rem;font-weight:600;">${i + 1}</td>
+      <td class="name-cell">${row.name}</td>
+      <td class="count-cell"><span class="admin-count-badge ${badgeClass}">${row.count}</span></td>
+      <td class="admin-bar-cell">
+        <div class="admin-bar-wrap">
+          <div class="admin-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  tableWrap.innerHTML = html;
 }
 
 </script>
